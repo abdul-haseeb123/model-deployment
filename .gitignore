@@ -15,3 +15,5 @@ data
 .env.*docker
 
 celerybeat-schedule
+
+model.pth
