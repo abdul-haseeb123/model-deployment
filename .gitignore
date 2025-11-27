@@ -12,6 +12,6 @@ data
 
 .env.local
 .env.*.local
-.env.*
+.env.*docker
 
 celerybeat-schedule
