@@ -1,0 +1,54 @@
+services:
+  backend:
+    build: .
+    volumes:
+      - ./:/usr/src/app
+    env_file:
+      - ./.env.docker
+    depends_on:
+      - redis-service
+    ports:
+      - 5000:5000
+    networks:
+      - backend-network
+
+  celery-worker:
+    build: .
+    command: celery -A make_celery worker --loglevel=info
+    volumes:
+      - ./:/usr/src/app
+    env_file:
+      - ./.env.docker
+    depends_on:
+      - redis-service
+    networks:
+      - backend-network
+
+  celery-beat:
+    build: .
+    command: celery -A make_celery beat --loglevel=info
+    volumes:
+      - ./:/usr/src/app
+    env_file:
+      - ./.env.docker
+    depends_on:
+      - redis-service
+    networks:
+      - backend-network
+
+  redis-service:
+    image: redis:latest
+    container_name: redis-service
+    volumes:
+      - data:/data
+    ports:
+      - 6379:6379
+    networks:
+      - backend-network
+
+volumes:
+  data:
+
+
+networks:
+  backend-network:

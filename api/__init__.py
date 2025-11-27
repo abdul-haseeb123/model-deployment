@@ -1,6 +1,8 @@
 import os
+from celery import Celery, shared_task
 from dotenv import load_dotenv
 from flask import Flask
+from celery.schedules import crontab
 
 from api.extensions import celery_init_app
 
@@ -11,12 +13,23 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY='dev',
     )
+    env_path = os.path.join(os.getcwd(), ".env.local")
+    load_dotenv(env_path)
     app.config["CELERY"] = {
         "broker_url": os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379"),
         "result_backend": os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379"),
+        "beat_schedule": {
+            "print-hello-world-every-10-seconds": {
+                "task": "api.hello_world",
+                "schedule": 10.0,
+            },
+            "identify-refunded-products-daily-midnight": {
+                "task": "api.routes.identify_refunded_products",
+                "schedule": crontab(hour=0, minute=0),
+            }
+        },
     }
-    env_path = os.path.join(os.getcwd(), ".env.local")
-    load_dotenv(env_path)
+    
     if test_config is None:
         # load the instance config, if it exists, when not testing
         app.config.from_pyfile('config.py', silent=True)
@@ -29,9 +42,13 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
-    celery_init_app(app)
+    celery_app = celery_init_app(app)
     from . import routes
     app.register_blueprint(routes.bp)
+
+    @shared_task
+    def hello_world():
+        print("Hello, World!")
 
 
     return app
